@@ -19,20 +19,20 @@ class DeepSeekAPI:
             base_url="https://api.deepseek.com/v1"
         )
 
-    def analyze_article_importance(self, article_text):
+    def analyze_article_importance(self, title):
         max_retries = 3
         retry_delay = 2
 
         for attempt in range(max_retries):
             try:
                 prompt = f"""
-                Analyze this cryptocurrency news article and rate its importance from 0-10 based on these criteria:
+                Rate this cryptocurrency news headline's importance from 0-10 based on these criteria:
                 - Is it about fundamental industry changes or developments?
                 - Does it contain groundbreaking news or significant innovations?
                 - Is it focused on long-term impact rather than short-term price analysis?
-                - Does it provide valuable insights about the crypto ecosystem?
+                - Is it about major industry developments or regulatory changes?
 
-                Article: {article_text}
+                Headline: {title}
 
                 Important: Return only a single number between 0-10 as your response.
                 """
@@ -48,15 +48,12 @@ class DeepSeekAPI:
                     stream=False
                 )
                 
-                # Print full response for debugging
-                print(f"Full API Response: {response}")
-                
                 content = response.choices[0].message.content.strip()
                 numeric_content = ''.join(c for c in content if c.isdigit() or c == '.')
                 rating = float(numeric_content)
                 rating = min(max(rating, 0), 10)
                 
-                print(f"Successfully processed article with rating: {rating}")
+                print(f"Successfully rated headline with score: {rating}")
                 return rating
                 
             except Exception as e:
@@ -64,7 +61,7 @@ class DeepSeekAPI:
                 if attempt < max_retries - 1:
                     print(f"Waiting {retry_delay} seconds before retry...")
                     time.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
+                    retry_delay *= 2
                 else:
                     print("All retries failed")
                     return 0
@@ -74,19 +71,18 @@ def get_top_articles(df, num_articles=5):
     article_ratings = []
     
     for idx, row in df.iterrows():
-        print(f"\nProcessing article {idx + 1}/{len(df)}")
-        print(f"Title: {row['TITLE'][:100]}...")  # Print truncated title for tracking
+        print(f"\nProcessing headline {idx + 1}/{len(df)}")
+        print(f"Title: {row['TITLE'][:100]}...")
         
-        article_text = f"Title: {row['TITLE']}\nBody: {row['BODY']}"
-        rating = api.analyze_article_importance(article_text)
+        # Only pass the title for analysis
+        rating = api.analyze_article_importance(row['TITLE'])
         article_ratings.append(rating)
         
-        # Add delay between requests
-        time.sleep(3)  # Increased delay to 3 seconds
+        time.sleep(3)  # Delay between requests
     
     df['importance_rating'] = article_ratings
     top_articles = df.nlargest(num_articles, 'importance_rating')
-    result_df = top_articles[['TITLE', 'BODY', 'URL', 'PUBLISHED_ON', 'importance_rating']]
+    result_df = top_articles[['TITLE', 'URL', 'PUBLISHED_ON', 'importance_rating']]  # Removed BODY
     
     return result_df
 
