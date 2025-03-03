@@ -1,6 +1,6 @@
 from openai import OpenAI
 import pandas as pd
-from newsdata import all_articles
+from newsdata import get_news_articles
 from dotenv import load_dotenv
 import os
 import time
@@ -120,8 +120,11 @@ def get_top_articles(df, num_articles=5):
     return result_df
 
 if __name__ == "__main__":
-    # Get the top 5 most important articles
-    top_articles = get_top_articles(all_articles)
+    # Get articles first
+    articles_df = get_news_articles('24h', 100)  # Or whatever parameters you want
+    
+    # Then get the top articles
+    top_articles = get_top_articles(articles_df)
     
     # Display results
     print("\nTop 5 Most Important Articles:")
